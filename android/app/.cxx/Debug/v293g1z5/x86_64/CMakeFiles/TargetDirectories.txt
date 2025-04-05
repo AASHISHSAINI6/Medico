@@ -1,0 +1,2 @@
+C:/AshishPrograms/Apps/MEDICO-main/MEDICO-main/android/app/.cxx/Debug/v293g1z5/x86_64/CMakeFiles/edit_cache.dir
+C:/AshishPrograms/Apps/MEDICO-main/MEDICO-main/android/app/.cxx/Debug/v293g1z5/x86_64/CMakeFiles/rebuild_cache.dir

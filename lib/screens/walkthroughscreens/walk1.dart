@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:medico/screens/walkthroughscreens/walk2.dart';
 import 'package:medico/screens/walkthrough.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class walk1 extends StatefulWidget {
   final VoidCallback nextPage;
@@ -18,6 +19,14 @@ class _walk1State extends State<walk1> {
     });
   }
 
+  // writing a function for taking a data in the shared prefrence and save it in the local storage
+  Future<void> save_walk_through_data( String key,String Value) async
+  {
+    final _prefs = await SharedPreferences.getInstance();
+    await _prefs.setString("gender", selectedGender);
+    print("saved:gender $selectedGender");
+  }
+  // function ends here
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -91,7 +100,10 @@ class _walk1State extends State<walk1> {
               ElevatedButton(
                   style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue.shade100),
-                  onPressed: () {widget.nextPage();},
+                  onPressed: () {
+                    save_walk_through_data("gender", selectedGender);
+                    widget.nextPage();
+                    },
                   child: Text(
                     "Continue",
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),

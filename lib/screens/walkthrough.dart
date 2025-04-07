@@ -29,6 +29,13 @@ class _WalkthroughScreenState extends State<walkscreen> {
   }
 
   @override
+  void dispose()
+  {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+
   Widget build(BuildContext context) {
     return Scaffold(
       body: Column(
@@ -45,7 +52,7 @@ class _WalkthroughScreenState extends State<walkscreen> {
           Expanded(
             child: PageView(
               controller: _pageController,
-              physics: NeverScrollableScrollPhysics(), // Disable swipe
+               // physics: NeverScrollableScrollPhysics(), // Disable swipe
               onPageChanged: (index) {
                 setState(() {
                   _currentPage = index;

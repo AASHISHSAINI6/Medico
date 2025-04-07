@@ -1,4 +1,6 @@
+
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class walk3 extends StatefulWidget {
   final VoidCallback nextPage;
@@ -10,7 +12,7 @@ class walk3 extends StatefulWidget {
 
 class _Walk3State extends State<walk3> {
   bool isCmSelected = true; // Default: Cm
-  double heightValue = 80;  // Default height in cm
+  double heightValue = 160;  // Default height in cm
   TextEditingController heightController = TextEditingController(text: "80");
 
   // Convert height when unit changes
@@ -31,6 +33,23 @@ class _Walk3State extends State<walk3> {
     });
   }
 
+  // writing a function for taking a data in the shared prefrence and save it in the local storage
+  Future<void> save_walk_through_data(String key, String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (value.isNotEmpty) {
+      await prefs.setString(key, value);
+      print("Saved: $key = $value");
+    }
+  }
+  // function ends here
+
+  //disposing the controller
+  void dispose()
+  {
+    heightController.dispose();
+    super.dispose();
+  }
+  // here thee function ends
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -86,7 +105,16 @@ class _Walk3State extends State<walk3> {
         
               ElevatedButton(
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.blue.shade100),
-                onPressed: () => widget.nextPage(),
+                onPressed: () {
+                  if(heightController.text.isNotEmpty){
+                    save_walk_through_data("height", heightController.text.trim());
+                    save_walk_through_data("height_unit", isCmSelected ? "Cm" : "Ft");
+                    widget.nextPage();
+                  }
+                  else{
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Can't be empty"),duration: Duration(seconds: 2),));
+                  }
+                },
                 child: Text("Continue", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
               )
             ],
@@ -120,3 +148,4 @@ class _Walk3State extends State<walk3> {
     );
   }
 }
+

@@ -1,9 +1,13 @@
+import 'package:firebase_auth/firebase_auth.dart'; // UPDATED CODE
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:medico/screens/Onboarding.dart';
 import 'package:medico/screens/homepage.dart';
 import 'loginpage.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+
 class SplashScreen extends StatefulWidget {
   @override
   _SplashScreenState createState() => _SplashScreenState();
@@ -23,9 +27,16 @@ class _SplashScreenState extends State<SplashScreen> {
 
     // Navigate to next screen after 3 seconds
     Future.delayed(Duration(seconds: 3), () {
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => WalkthroughScreen()));
+      if (FirebaseAuth.instance.currentUser != null) {
+        Navigator.pushReplacement(
+            context, MaterialPageRoute(builder: (context) => HomePage())); // UPDATED CODE
+      } else {
+        Navigator.pushReplacement(
+            context, MaterialPageRoute(builder: (context) => LoginPage()));
+      }
     });
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -98,18 +109,3 @@ class _SplashScreenState extends State<SplashScreen> {
     );
   }
 }
-
-// Positioned.fill(
-// child: Image.asset("assets/images/doctor.jpg", fit: BoxFit.cover),
-// ),
-// Positioned.fill(
-// child: BackdropFilter(
-// filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-// child: Container(color: Colors.black.withOpacity(0.2)),
-// ),
-// ),
-// Container(
-// height: double.infinity,
-// width: double.infinity,
-// color: Colors.blue.withOpacity(0.3),
-// ),

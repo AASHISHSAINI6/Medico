@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class walk4 extends StatefulWidget {
   final VoidCallback nextPage;
@@ -30,7 +31,22 @@ class _WalkWeightState extends State<walk4> {
       isKgSelected = (unit == "Kg");
     });
   }
+// writing a function for taking a data in the shared prefrence and save it in the local storage
+  Future<void> save_walk_through_data(String key, String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (value.isNotEmpty) {
+      await prefs.setString(key, value);
+      print("Saved: $key = $value");
+    }
+  }
+  // function ends here
 
+  // disposing the controllers in flutter
+  void dispose()
+  {
+    weightController.dispose();
+    super.dispose();
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -86,7 +102,16 @@ class _WalkWeightState extends State<walk4> {
 
               ElevatedButton(
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.blue.shade100),
-                onPressed: () => widget.nextPage(),
+                onPressed: (){
+                  if(weightController.text.isNotEmpty){
+                    save_walk_through_data("weight", weightController.text.trim());
+                    save_walk_through_data("weight_unit", isKgSelected ? "Kg" : "Lbs");
+                    widget.nextPage();
+                  }
+                  else{
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Can't be empty"),duration: Duration(seconds: 2),));
+                  }
+                },
                 child: Text("Continue", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
               )
             ],

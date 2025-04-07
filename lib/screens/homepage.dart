@@ -1,17 +1,23 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:medico/Services/infermedica_service.dart';
 import 'package:medico/screens/loginpage.dart';
 import 'package:medico/screens/profilepage.dart';
 import 'package:medico/screens/settings.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'NotificationPage.dart';
 import 'historypage.dart';
 import 'models.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
 import 'profilepage.dart';
+
+
 
 class ChatMessage {
   final String text;
@@ -36,7 +42,6 @@ class HomePage extends StatefulWidget {
   @override
   State<HomePage> createState() => _HomePageState();
 }
-
 class _HomePageState extends State<HomePage> {
   final List<ChatMessage> _messages = []; // Current chat session (displayed)
   final List<ChatMessage> _currentChatHistory = []; // Current session history
@@ -65,70 +70,195 @@ class _HomePageState extends State<HomePage> {
     super.dispose();
   }
 
-  Future<String> _fetchHealthResponse(String symptom) async {
+  Future<String> _fetchFromInfermedica(String userInput) async {
+    const String apiUrl = "https://api.infermedica.com/v3/parse";
+    const String appId = "YOUR_APP_ID"; // Replace with your actual APP-ID
+    const String appKey = "YOUR_APP_KEY"; // Replace with your actual APP-KEY
+
+    final headers = {
+      'App-Id': appId,
+      'App-Key': appKey,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    };
+
+    final body = jsonEncode({
+      "text": userInput,
+      "include_tokens": true,
+    });
+
     try {
-      final response = await http.get(Uri.parse('https://disease.sh/v3/diseases'));
+      final response = await http.post(
+        Uri.parse(apiUrl),
+        headers: headers,
+        body: body,
+      );
+
       if (response.statusCode == 200) {
-        List<dynamic> data = jsonDecode(response.body);
-        var disease = data.firstWhere(
-              (d) => (d['symptoms'] as List).any((s) => s.toString().toLowerCase() == symptom.toLowerCase()),
-          orElse: () => null,
-        );
-        if (disease != null) {
-          return "Possible condition: ${disease['disease']}. Rest and consult a doctor.";
+        final data = jsonDecode(response.body);
+        final mentions = data['mentions'] as List<dynamic>;
+        if (mentions.isEmpty) {
+          return "Sorry, I couldn't understand any symptoms. Please try again.";
         }
-        return "No condition found for '$symptom'. Rest and consult a doctor.";
+
+        final symptoms = mentions.map((m) => m['name']).join(', ');
+        return "I understood the following symptoms: $symptoms.\nWould you like to proceed with diagnosis?";
+      } else {
+        return "API Error: ${response.statusCode} - ${response.body}";
       }
-      return "Error fetching data.";
     } catch (e) {
-      return "Error: $e";
+      return "Something went wrong: $e";
     }
   }
 
-  void _sendMessage() async {
-    if (_controller.text.isEmpty && _selectedImagePaths.isEmpty) return;
+  List<Map<String, dynamic>> _evidence = [];
+  bool _awaitingDiagnosisConfirmation = false;
 
+  Future<void> _sendMessage() async {
+    String userInput = _controller.text.trim();
+    if (userInput.isEmpty) return;
+
+  //older code for home to chat page
+  //   setState(() {
+  //     _previousIndex = _selectedIndex;
+  //     _selectedIndex = 1; // Switch to Chat tab when sending a message
+  //     final _messages = ChatMessage(
+  //       text: _controller.text.isNotEmpty ? _controller.text : "Images uploaded",
+  //       isSentByUser: true,
+  //       imagePaths: _selectedImagePaths,
+  //       timestamp: DateTime.now(),
+  //     );
+  //     _currentChatHistory.add(_messages);
+  //     _notifications.add(NotificationModel(
+  //       title: "New message sent",
+  //       time: DateFormat('h:mm a').format(DateTime.now()),
+  //     ));
+  //     print("Message sent: ${_messages.text}, Total messages in current session: ${_currentChatHistory.length}");
+  //   });
+  //   _scrollController.animateTo(
+  //     _scrollController.position.maxScrollExtent,
+  //     duration: const Duration(milliseconds: 300),
+  //     curve: Curves.easeOut,
+  //   );
+  //
+    final newMessage = ChatMessage(
+      text: userInput,
+      isSentByUser: true,
+      timestamp: DateTime.now(),
+    );
+
+    // Add the user's message
     setState(() {
       _previousIndex = _selectedIndex;
-      _selectedIndex = 1; // Switch to Chat tab when sending a message
-      final message = ChatMessage(
-        text: _controller.text.isNotEmpty ? _controller.text : "Images uploaded",
-        isSentByUser: true,
-        imagePaths: _selectedImagePaths,
-        timestamp: DateTime.now(),
-      );
-      _messages.add(message);
-      _currentChatHistory.add(message);
+      _selectedIndex = 1;
+
+     //_messages.add(newMessage);
+      _currentChatHistory.add(newMessage);
       _notifications.add(NotificationModel(
         title: "New message sent",
         time: DateFormat('h:mm a').format(DateTime.now()),
       ));
-      print("Message sent: ${message.text}, Total messages in current session: ${_currentChatHistory.length}");
     });
 
-    String aiResponse = _selectedImagePaths.isNotEmpty
-        ? "I see your images. Any symptoms?"
-        : await _fetchHealthResponse(_controller.text);
-
-    setState(() {
-      final response = ChatMessage(
-        text: aiResponse,
-        isSentByUser: false,
-        timestamp: DateTime.now(),
-      );
-      _messages.add(response);
-      _currentChatHistory.add(response);
-      _controller.clear();
-      _selectedImagePaths = [];
-      print("AI response added: ${response.text}, Total messages in current session: ${_currentChatHistory.length}");
-    });
-
+// Scroll to bottom
+    await Future.delayed(Duration(milliseconds: 100)); // Ensure UI is built before scrolling
     _scrollController.animateTo(
-      _scrollController.position.maxScrollExtent,
+      _scrollController.position.maxScrollExtent + 100,
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeOut,
     );
+
+
+
+    setState(() {
+      _messages.add(ChatMessage(text: userInput, isSentByUser: true, timestamp: DateTime.now()));
+    });
+
+    _controller.clear();
+
+    // Check if user says "yes" and we're awaiting confirmation
+    if (_awaitingDiagnosisConfirmation &&
+        (userInput.toLowerCase().contains("yes") ||
+            userInput.toLowerCase().contains("ok"))) {
+
+      // Proceed to diagnosis
+      final diagnosisResponse = await http.post(
+        Uri.parse("https://api.infermedica.com/v3/diagnosis"),
+        headers: {
+          'Content-Type': 'application/json',
+          'App-Id': 'YOUR_APP_ID',
+          'App-Key': 'YOUR_APP_KEY',
+        },
+        body: jsonEncode({
+          "sex": "male", // or ask the user
+          "age": 25,     // or get from user profile
+          "evidence": _evidence
+        }),
+      );
+
+      final diagnosisData = jsonDecode(diagnosisResponse.body);
+      final conditions = diagnosisData["conditions"];
+
+      if (conditions.isNotEmpty) {
+        String conditionText = "Based on your symptoms, you might have:\n";
+        for (var condition in conditions.take(3)) {
+          conditionText +=
+          "- ${condition["name"]} (${(condition["probability"] * 100).toStringAsFixed(1)}%)\n";
+        }
+        setState(() {
+          _messages.add(ChatMessage(text: conditionText, isSentByUser: false, timestamp: DateTime.now()));
+          _awaitingDiagnosisConfirmation = false; // Reset
+        });
+      } else {
+        setState(() {
+          _messages.add(ChatMessage(text: "Sorry, I couldn't identify any conditions.", isSentByUser: false, timestamp: DateTime.now()));
+          _awaitingDiagnosisConfirmation = false;
+        });
+      }
+
+      return;
+    }
+
+    // Normal flow — parse input for symptoms
+    final response = await http.post(
+      Uri.parse("https://api.infermedica.com/v3/parse"),
+      headers: {
+        'Content-Type': 'application/json',
+        'App-Id': 'YOUR_APP_ID',
+        'App-Key': 'YOUR_APP_KEY',
+      },
+      body: jsonEncode({
+        "text": userInput,
+        "include_tokens": true
+      }),
+    );
+
+    final data = jsonDecode(response.body);
+    final mentions = data["mentions"];
+
+    if (mentions.isEmpty) {
+      setState(() {
+        _messages.add(ChatMessage(text: "Sorry, I couldn't identify any symptoms. Please try again.", isSentByUser: false,timestamp:DateTime.now()));
+      });
+      return;
+    }
+
+    _evidence = mentions.map<Map<String, dynamic>>((mention) {
+      return {
+        "id": mention["id"],
+        "choice_id": "present"
+      };
+    }).toList();
+
+    setState(() {
+      _messages.add(ChatMessage(
+        text: "I understood the following symptoms: ${mentions.map((m) => m["name"]).join(", ")}.\nWould you like to proceed with diagnosis?",
+        isSentByUser: false,timestamp: DateTime.now()
+      ));
+      _awaitingDiagnosisConfirmation = true;
+    });
   }
+
 
   void _pickImages() async {
     final result = await FilePicker.platform.pickFiles(type: FileType.image, allowMultiple: true);
@@ -154,7 +284,9 @@ class _HomePageState extends State<HomePage> {
       _selectedIndex = 0; // Switch back to Home tab
       _currentChatHistory.clear();
       _messages.clear();
-      _selectedImagePaths.clear();
+
+      // _selectedImagePaths.clear();
+
       _controller.clear();
       _notifications.add(NotificationModel(
         title: "New chat started",
@@ -180,7 +312,7 @@ class _HomePageState extends State<HomePage> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const Text(
-            "Welcome to Medico!\nStart a chat by typing a message.",
+            "Welcome to Medico!\nStart a chat by typing a Symptoms.",
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 18, color: Colors.grey),
           ),
@@ -197,9 +329,16 @@ class _HomePageState extends State<HomePage> {
                       icon: const Icon(Icons.attach_file),
                       onPressed: _pickImages,
                     ),
-                    suffixIcon: IconButton(
-                      icon: const Icon(Icons.send),
-                      onPressed: _sendMessage,
+                    suffixIcon: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.deepPurple,
+                        shape: BoxShape.circle
+                      ),
+                      padding: EdgeInsets.all(0.5),
+                      child: IconButton(
+                        icon: const Icon(Icons.send_rounded,color: Colors.white,),
+                        onPressed: _sendMessage,
+                      ),
                     ),
                   ),
                   onSubmitted: (_) => _sendMessage(), // Switch to Chat tab on submission
@@ -273,9 +412,13 @@ class _HomePageState extends State<HomePage> {
                       icon: const Icon(Icons.attach_file),
                       onPressed: _pickImages,
                     ),
-                    suffixIcon: IconButton(
-                      icon: const Icon(Icons.send),
-                      onPressed: _sendMessage,
+                    suffixIcon: CircleAvatar(
+                      radius: 20,
+                      backgroundColor: Colors.deepPurple,
+                      child: IconButton(
+                        icon: const Icon(Icons.send_rounded,color: Colors.white,),
+                        onPressed: _sendMessage,
+                      ),
                     ),
                   ),
                   onSubmitted: (_) => _sendMessage(),

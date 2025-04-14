@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:medico/screens/Onboarding.dart';
-import 'package:medico/screens/homepage.dart';
+import 'package:medico/screens/_homepageClone.dart';
 import 'package:medico/screens/profilepage.dart';
 import 'signup.dart'; // Import the signup page
 

@@ -2,10 +2,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:medico/screens/Onboarding.dart';
-import 'package:medico/screens/homepage.dart';
+//import 'package:medico/screens/homepage.dart';
 import 'package:medico/screens/loginpage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:medico/screens/_homepageClone.dart';
+
 class walk11 extends StatefulWidget {
   final VoidCallback nextPage;
   const walk11({super.key, required this.nextPage});
@@ -144,7 +146,7 @@ Future<void> clear_all_data_from_shared_prefrence() async
 
                   Navigator.pushReplacement(
                     context,
-                    MaterialPageRoute(builder: (context) => HomePage()),
+                    MaterialPageRoute(builder: (context) => HomePageClone()),
                   );
                 }
               },

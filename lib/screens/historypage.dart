@@ -29,7 +29,11 @@ class _HistorypageState extends State<Historypage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Messages')),
+      appBar: AppBar(
+        backgroundColor: Colors.deepPurple,
+        title: Text('History',style: TextStyle(color: Colors.white,fontWeight: FontWeight.bold),),
+      centerTitle: true,
+      leading: IconButton(onPressed: (){Navigator.push(context,MaterialPageRoute(builder: (context) => HomePageClone()));}, icon: Icon(Icons.arrow_back,color: Colors.white,)),),
       body: ListView.separated(
         itemCount: chats.length,
         separatorBuilder: (context, index) => Divider(height: 1),
